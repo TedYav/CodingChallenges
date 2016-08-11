@@ -1,3 +1,13 @@
+/*
+
+    704B: Antman
+
+    PROBLEM: http://codeforces.com/problemset/problem/704/B
+
+    SOLUTION:
+
+*/
+
 #include <iostream>
 #include <string>
 #include <sstream>

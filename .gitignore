@@ -31,3 +31,9 @@ bower_components/
 
 #OS X
 *.DS_STORE*
+
+CodingChallenges.works
+.codelight
+.clang
+
+*.out
