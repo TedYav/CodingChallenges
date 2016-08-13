@@ -1,4 +1,5 @@
 #include <iostream>
+#include <random>
 using namespace std;
 
 void swap(int arr[], int a, int b){
@@ -8,52 +9,53 @@ void swap(int arr[], int a, int b){
 }
 
 void sort(int arr[], int length){
-	if(length <= 1){
-		return;
-	}
-
-	cout << "SORTING: " << endl;
-	for (int i = 0; i < length; i++)
-	{
-		cout << arr[i] << endl;
-	}
-	cout << "XXXXXX" << endl;
-
-	int pivot = arr[length-1]; // right pivot
-
-	int offset = 0;
-	for(int i=0; i<length; i++){
-		if(arr[i]<pivot){
-			swap(arr,offset++,i);
+	if(length > 1){
+		int offset = 0;
+		for(int i=0; i<length; i++){
+			if(arr[i]<arr[length-1]){
+				swap(arr,offset++,i);
+			}
 		}
+		swap(arr, offset++,length-1);
+		sort(arr, offset - 1);
+		sort(arr+offset, length-offset);
 	}
-
-	swap(arr,offset++,length-1);
-
-	cout << "PIVOTED: " << endl;
-	for (int i = 0; i < length; i++)
-	{
-		cout << arr[i] << endl;
-	}
-	cout << "OFFSET: " << offset << endl;
-	cout << "XXXXXX" << endl;
-
-	sort(arr, offset - 1);
-	sort(arr+offset, length-offset);
-
-	return;
 }
 
+void testSort(int size, int num){
+	int* arr = new int[size];
+	random_device rd;
+	mt19937 eng(rd());
+	uniform_int_distribution<> distr(-1*size,size);
+	bool success = true;
+	for(int j=0; j<num; j++){
+		for (int i = 0; i < size; i++)
+		{
+			arr[i] = distr(eng);
+		}
+		sort(arr,size);
+		success = true;
+		for (int i = 0; i < size-1; i++)
+		{
+			if(arr[i] > arr[i+1]){
+				cout << "FAILURE: " << arr[i] << " > " << arr[i+1] << endl;
+				success = false;
+			}
+		}
+		cout << "TEST " << j << ((success) ? " PASSED" : " FAILED") << endl;
+	}
+}
+
+/*
+std::random_device rd; // obtain a random number from hardware
+    std::mt19937 eng(rd()); // seed the generator
+    std::uniform_int_distribution<> distr(25, 63); // define the range
+
+    for(int n=0; n<40; ++n)
+        std::cout << distr(eng) << ' '; // generate numbers
+*/
+
 int main(){
-	int test[] = {2,8,5,4,3,2,4}; // 2,3,4,5,8
-	for (int i = 0; i < 5; i++)
-	{
-		cout << test[i] << endl;
-	}
-	sort(test, 7);
-	for (int i = 0; i < 7; i++)
-	{
-		cout << test[i] << endl;
-	}
+	testSort(5000000,5000);
 	return 0;
 }
