@@ -3,42 +3,44 @@
 using namespace std;
 
 int main(){
-	int n, *r, *c, t=0, min = 0;
+	int n, *r, *c;
+	long t = 0;
 	bool again = true;
 	cin >> n;
 	r = new int[n+2];
 	c = new int[n+2];
-	r[0] = r[n+1] = -1;
-	c[0] = c[n+1] = 0;
+	r[0] = r[n+1] = 100000000;
+	c[0] = c[n+1] = -1;
 	for(int i=1; i<=n; i++){
 		cin >> r[i];
 		c[i] = 1;
 	}
 	
-	// get diffs
-	for(int i=1; i<=n; i++){
-		if(r[i] > r[i-1] && c[i] <= c[i-1]){
-			c[i] = c[i-1] + 1;
-		}else if(r[i] < r[i-1] && c[i] >= c[i-1]){
-			c[i] = c[i-1] - 1;
+	while(again){
+		again = false;
+		for(int i=1; i<=n; i++){
+			if(r[i] > r[i-1] && c[i] <= c[i-1]){
+				again = true;
+				c[i] = c[i-1] + 1;
+			}else if(r[i] > r[i+1] && c[i] <= c[i+1]){
+				again = true;
+				c[i] = c[i+1] + 1;
+			}
+
+			if(r[n+1-i] > r[n-i] && c[n+1-i] <= c[n-i]){
+				again = true;
+				c[n+1-i] = c[n-i] + 1;
+			}else if(r[n+1-i] > r[n+2-i] && c[n+1-i] <= c[n+2-i]){
+				again = true;
+				c[n+1-i] = c[n+2-i] + 1;
+			}
 		}
-		min = (c[i] < min ? c[i] : min);
 	}
 
 	for(int i=1; i<=n; i++){
-		c[i] += (min * -1) + 1;
-		if(r[i] <= r[i-1] && r[i] <= r[i+1]){
-			c[i] = 1;
-		}
 		t += c[i];
-		cout << c[i] << endl;
 	}
-
-	for(int i=1; i<= n; i++){
-		if((r[i] > r[i-1] && c[i] <= c[i-1]) || (r[i] > r[i+1] && c[i] <= c[i+1])){
-			cout << "FAIL" << endl;
-		}
-	}
+	
 	cout << t << endl;
 	return 0;
 }

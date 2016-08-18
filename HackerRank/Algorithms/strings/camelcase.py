@@ -1,0 +1,1 @@
+print(len([c for c in list(input().strip()) if c.isupper()])+1)
