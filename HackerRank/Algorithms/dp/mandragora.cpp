@@ -1,36 +1,48 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <array>
 
 using namespace std;
 
+// strategy --> largest noncontiguous subsequence of size n, n-1, n-2 etc
+// multiply
+
 int main(){
-	long t, n;
+	int t, n;
 	long mExp;
-	vector<long> h;
-	vector<long> dp;
+	long *h;
+	long ** dp;
 
 	cin >> t;
 	while(t--){
 		cin >> n;
-		// 1 indexed for ease
-		h = vector<long>(n+1);
-		h[0] = 0;
-		dp = vector<long>(n+1);
-		fill(dp.begin(), dp.end(), 0);
-		for(vector<long>::iterator i = (h.begin() + 1), e = h.end(); i!= e; ++i){
-			cin >> *i;
+		h = new long[n];
+		dp = new long*[n];
+		cin >> h[0];
+		dp[0] = new long[n];
+		dp[0][0] = h[0];
+		for (int i = 1; i < n; ++i)
+		{
+			cin >> h[i];
+			dp[i] = new long[n];
+			dp[0][i] = dp[0][i-1] + h[i];
 		}
-		sort(h.begin(), h.end());
-		mExp = 0;
-		for(long i=n-1; i>=0; --i){
-			long tmp = 0;
-			for(long j=i+1; j<=n; ++j){
-				tmp += (i+1) * h[j]; 
+		for(int e=1; e < n; e++){
+			for(int k=e; k < n; k++){
+				dp[e][k] = max(dp[e][k-1] + h[k], dp[e-1][k-1]);
+				// cout << dp[e][k] << endl;
 			}
-			dp[i] = tmp;
-			mExp = (tmp > mExp ? tmp : mExp);
 		}
+		long prev = -1;
+		for(long i=0; i<n; i++){
+			mExp = dp[i][n-1]*(i+1);
+			if(prev > mExp){
+				mExp = prev;
+				break;
+			}
+			prev = dp[i][n-1]*(i+1);
+		}	
 		cout << mExp << endl;
 	}
 	return 0;
