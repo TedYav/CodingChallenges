@@ -3,7 +3,6 @@
 
 inline int binsearch(int arr[], int target, int len){
 	int hi = len+1, lo = 0, test;
-	int i = 0;
 	while(hi-lo > 1){
 		test = (hi+lo)/2;
 		if(arr[test] >= target){
