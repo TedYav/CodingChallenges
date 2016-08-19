@@ -3,7 +3,7 @@
 int main(){
 	std::ios::sync_with_stdio(false);
 
-	int n, a[1000005], l[1000005], t, ms;
+	int n, a[1000005], dp[1000005], t, ms;
 
 	std::cin >> n;
 
