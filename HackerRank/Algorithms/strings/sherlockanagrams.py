@@ -22,22 +22,26 @@ class Node:
 		s = "";
 		if(self.left):
 			s += str(self.left)
-		s += self.val if self.val else ""
+		s += ("".join(self.val)) if self.val else ""
 		if(self.right):
 			s += str(self.right)
+		# if((self.left and self.left.val and self.left.val > self.val) or (self.right and self.right.val and self.right.val <= self.val)):
+		# 				print("WTF: SELF.VAL: ", self.val, " LEFT.VAL", self.left.val, " RIGHT.VAL: ", self.right.val)
 		return s
 
 	# cuts down on duplicate code
 	# ensures we have dummy child nodes
 	# but only if we are not a dummy
 	def initVal(self, val):
-		self.val = val
+		self.val = [val] if val else None
 		self.left = Node(None, self) if val else None 
 		self.right = Node(None, self) if val else None
 	
 	def addVal(self, val):
 		if(self.val):
-			if(val <= self.val):
+			if(val == self.val[0]):
+				self.val.append(val)
+			if(val < self.val[0]):
 				self.left.addVal(val)
 			else:
 				self.right.addVal(val)
@@ -53,20 +57,31 @@ class Node:
 		else:
 			target.initVal(None)
 
+	#teststring: askdjfhfhdjsk
+
 	def delVal(self, val):
 		if(self.val):
-			if(val == self.val):
-				if(self.left.val or self.right.val):
-					if(self.left.val):
-						self.pivot(self.left)
+			print(self.val)
+			if(val == self.val[0]):
+				# print("FOUND ", val, " DELETING: ", str(self))
+				self.val.pop()
+				print(self.val)
+				if(len(self.val) == 0):
+					if(self.left.val or self.right.val):
+						# print("LEFT: ", str(self.left))
+						# print("LEFT VAL:", self.left.val)
+						# print("RIGHT: ", str(self.right))
+						# print("RIGHT VAL:", self.right.val)
+						if(self.left.val):
+							self.pivot(self.left)
+						else:
+							self.pivot(self.right)
 					else:
-						self.pivot(self.right)
-				else:
-					self.initVal(None)
-					# in case we deleted THE WHOLE TREE!
-					return True if self.parent else False
+						self.initVal(None)
+						# in case we deleted THE WHOLE TREE!
+						return True if self.parent else False
 
-			elif(val < self.val):
+			elif(val < self.val[0]):
 				self.left.delVal(val)
 
 			else:
@@ -85,11 +100,10 @@ for z in range(t):
 	s = list(input().strip())
 	print(s)
 	test = Node(s[0])
-	print(test)
 	for i in range(1,len(s)):
 		test.addVal(s[i])
-		print(test)
+	print("RESULT: ", test)
 	for i in range(len(s)-1,-1,-1):
+		print("DELETING: ", s[i])
 		result = test.delVal(s[i])
-		print(test)
-		print(result)
+		print("RESULT: ", test)
