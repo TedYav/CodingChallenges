@@ -4,6 +4,9 @@ inline int ceil(int num, int div){
 	return (num % 2 ? (num/2) + 1 : num/2);
 }
 
+// I could memoize this to speed it up
+// use a vector and keep a previous max value
+// but not needed for speed here
 int primes(int num){
 	int size = ceil(num, 2);
 	int * nums = new int[size];
