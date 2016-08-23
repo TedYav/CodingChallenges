@@ -41,7 +41,7 @@ class Node:
 		if(self.val):
 			if(val == self.val[0]):
 				self.val.append(val)
-			if(val < self.val[0]):
+			elif(val < self.val[0]):
 				self.left.addVal(val)
 			else:
 				self.right.addVal(val)
@@ -61,11 +61,9 @@ class Node:
 
 	def delVal(self, val):
 		if(self.val):
-			print(self.val)
 			if(val == self.val[0]):
 				# print("FOUND ", val, " DELETING: ", str(self))
 				self.val.pop()
-				print(self.val)
 				if(len(self.val) == 0):
 					if(self.left.val or self.right.val):
 						# print("LEFT: ", str(self.left))
@@ -100,10 +98,10 @@ for z in range(t):
 	s = list(input().strip())
 	print(s)
 	test = Node(s[0])
+	print(test)
 	for i in range(1,len(s)):
 		test.addVal(s[i])
-	print("RESULT: ", test)
+		print(test)
 	for i in range(len(s)-1,-1,-1):
-		print("DELETING: ", s[i])
 		result = test.delVal(s[i])
-		print("RESULT: ", test)
+		print(test)
