@@ -693,3 +693,134 @@ def is_repeated_string(s, count):
 		for i in range(count):
 			chunks.append(s[i*chunk_size:(i+1)*chunk_size])
 		return len(set(chunks)) == 1
+
+"""
+
+	POND SIZES:
+		input: matrix, with plot of land representing height above sea level
+		ASSUME: 0 == pond, so no negative values (or, at least, negative values don't count as water)
+
+	SIMPLE SOLUTION:
+		Two Functions: Scan --> O(n*m), Measure_Pond (recursive) --> O(size of pond)
+		Overall O(n*m) + O(sum(pond sizes)) == O(n*m)
+
+		02323290
+		03920000
+
+"""
+
+def pond_sizes(land):
+	if not land:
+		return None
+	else:
+		output = []
+		width = len(land[0])
+		height = len(land)
+		for row in range(height):
+			for col in range(width):
+				if land[row][col] == 0:
+					output.append(measure_pond(land, row, col))
+		print(", ".join(map(str,output)))
+		return output
+
+def measure_pond(land, row, col):
+	stack = [(row,col)]
+	size = 0
+	while stack:
+		row,col = stack.pop()
+		if land[row][col] == 0:
+			land[row][col] = -1
+			size += 1
+			next_squares = [(row + i, col + j) for i in range(-1,2,1) for j in range(-1,2,1)]
+			next_squares = list(filter(lambda t: is_pond(land,t[0],t[1]), next_squares))
+			stack.extend(next_squares)
+	return size
+
+def is_pond(land,row,col):
+	conditions = []
+	conditions.append(row >= 0)
+	conditions.append(col >= 0)
+	conditions.append(row < len(land))
+	conditions.append(col < len(land[0]))
+	return (land[row][col] == 0) if all(conditions) else False
+
+def test_pond_sizes(n=1000,m=1000):
+	land = [[0,2,1,0],[0,1,0,1],[1,1,0,1],[0,1,0,1]]
+	pond_sizes(land)
+
+	land = [[random.randint(-1000,1000) for i in range(n)] for j in range(m)]
+	land = list(map(lambda row: list(map(lambda c: 0 if c < 0 else c, row)), land))
+	total_pond = sum(map(lambda row: row.count(0), land))
+	print(land)
+	print(total_pond)
+	result = pond_sizes(land)
+	print(sum(result))
+	assert sum(result) == total_pond
+
+"""
+
+	T9:
+
+	AWFUL: array of tuples [(xxxx, word),(yyyy,word2)]
+	BAD: dictionary {xxxx:word1,word2, yyyy:word3,word4} (FASTEST, but what if we have a lot of words?)
+	BEST: tree: nodes have key and values
+		root: key 0
+		key: 0-9
+		children: 0-9
+		words: words that end at this node
+
+"""
+class T9Node:
+	def __init__(self, key=0):
+		self.key = key
+		self.words = []
+		self.children = [None for i in range(10)]
+
+class T9Tree:
+	def __init__(self, words=[]):
+		self.__root = T9Node()
+		self.__mapping = self.make_mapping()
+		for word in words:
+			self.add_word(word)
+
+	def lookup_word(self, code):
+		node = self.__root
+		code = str(code)
+		for digit in code:
+			node = node.children[int(digit)]
+			if node is None: return []
+		return node.words
+
+	def make_mapping(self):
+		nums = [2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7,7,8,8,8,9,9,9,9]
+		mapping = {chr(c):nums[c - ord('a')] for c in range(ord('a'), ord('z') + 1)}
+		print(mapping)
+		return mapping
+
+	def word_to_code(self, word):
+		code = 0
+		word = word.lower()
+		for c in word:
+			code *= 10
+			code += self.__mapping[c]
+		return code
+
+	def add_word(self, word):
+		node = self.__root
+		word = word.lower()
+		for c in word:
+			digit = self.__mapping[c]
+			if node.children[digit] is None:
+				node.children[digit] = T9Node(key=digit)
+			node = node.children[digit]
+		node.words.append(word)
+
+def test_T9_tree():
+	words = ['apple', 'Orange', 'banana', 'pear', 'girl', 'python', 'Google', 'tree', 'used']
+	tree = T9Tree(words)
+	print(words)
+	codes = list(map(lambda word: tree.word_to_code(word), words))
+	print(codes)
+	for code in codes:
+		print("WORD FOR CODE: %d IS: %s" % (code, tree.lookup_word(code)))
+
