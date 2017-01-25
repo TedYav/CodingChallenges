@@ -38,28 +38,52 @@ def mergesort(a, cmp=lambda x,y: x<y):
 
 # stack based randomized quick sort in place
 import random
-def quicksort(a):
+
+def quicksort_a(a):
+	return quicksort(a, partition_double_counter)
+
+def quicksort_b(a):
+	return quicksort(a, partition_single_counter)
+
+def quicksort(a, partition_alg=partition_double_counter):
 	stack = [(0,len(a)-1)]
 	def swap(i,j): a[i],a[j] = a[j],a[i]
 	while stack:
 		start, end = stack.pop()
 		if end-start > 0:
-			pivot_index = random.randint(start,end)
-			swap(pivot_index, end)
-			pivot = a[end]
-			i,j = start,end-1
-			while i<=j:
-				while a[i] <= pivot and i < end: i += 1
-				while a[j] > pivot and j >= i: j -= 1
-				if i < j:
-					swap(i,j)
-					i += 1
-					j -= 1
-			swap(end,i)
-			stack.append((start,i-1))
-			stack.append((i+1, end))
+			pivot_index = partition_alg(a,start,end)
+			stack.append((start,pivot_index-1))
+			stack.append((pivot_index+1, end))
 	print(a)
 	return a
+
+def partition_double_counter(arr, left, right):
+	pivot_index = random.randint(left,right)
+	swap(arr,pivot_index,right)
+	pivot = arr[right]
+	i,j = left,right-1
+	while i<=j:
+		while arr[i] <= pivot and i < right: i += 1
+		while arr[j] > pivot and j >= i: j -= 1
+		if i<j:
+			swap(arr,i,j)
+			i += 1
+			j -= 1
+	swap(arr,right,i)
+	return i
+
+
+def partition_single_counter(arr, left, right):
+	pivot_index = random.randint(left,right)
+	swap(arr,pivot_index,right)
+	pivot = arr[right]
+	pivot_index = 0
+	for i in range(right):
+		if arr[i] <= pivot:
+			swap(arr,i,pivot_index)
+			pivot_index += 1
+	swap(arr,pivot_index,right)
+	return pivot_index
 
 from functools import reduce
 def radix_sort(arr):
@@ -168,6 +192,14 @@ def test_sort(method, iterations=10, length=1000):
 def test_quicksort():
 	test_sort(quicksort)
 
+import timeit
+def compare_quicksorts():
+	def test1(): test_sort(quicksort_a)
+	def test2(): test_sort(quicksort_b)
+	time1 = timeit.timeit(test1, number=1)
+	time2 = timeit.timeit(test2, number=1)
+	print("TIME WITH DOUBLE PARTITION: %f\nTIME WITH SINGLE PARTITION: %f" % (time1, time2))
+
 
 def test_booksort():
 	test_sort(book_quicksort)
@@ -235,13 +267,6 @@ def group_anagrams(strings):
 				anagrams[word_hash] = [word]
 		return reduce(lambda x,y: x+y, [anagrams[word_hash] for word_hash in anagrams])
 
-def generate_charmap():
-	primes = generate_primes(26)
-	return {chr(i):primes[i - ord('a')] for i in range(ord('a'),ord('z')+1)}
-
-def anagram_hash(word, charmap=generate_charmap()):
-	return sum(map(lambda c: charmap[c],word))
-
 import math
 def generate_primes(n):
 	nums = list(range(1,n*10, 2))
@@ -262,10 +287,20 @@ def generate_primes(n):
 	nums[0] = 2
 	return list(filter(lambda x: x > 0, nums))[:n]
 
+def generate_charmap():
+	primes = generate_primes(26)
+	return {chr(i):primes[i - ord('a')] for i in range(ord('a'),ord('z')+1)}
+
+def anagram_hash(word, charmap=generate_charmap()):
+	return sum(map(lambda c: charmap[c],word))
+
+def make_word(max_length=10):
+	return ''.join([chr(random.randint(ord('a'), ord('z'))) for c in range(random.randint(2, max_length))])
+
 def test_group_anagrams(num_anagrams=10, max_length=10):
 	strings = []
 	for _ in range(num_anagrams):
-		word = ''.join([chr(random.randint(ord('a'), ord('z'))) for c in range(random.randint(2, max_length))])
+		word = make_word(max_length)
 		print(word)
 		strings.append(word)
 		for i in range(random.randint(0,max_length//2)):
@@ -292,3 +327,222 @@ def shuffle(iterable):
 		if len(output) > 1:
 			swap(output,len(output)-1,random.randint(0,len(output)-1))
 	return output
+
+# supports recursive call to avoid advanced logic when low, guess, high are equal
+# NEVERMIND, this WILL fail if there are LOTS of duplicates. The book example uses unique integers
+def rotated_binary_search(arr, target, low = None, high = None):
+	low, high = 0, len(arr) - 1
+	while high-low > 1:
+		guess = (low + high)//2
+		if arr[guess] == target:
+			return guess
+		elif arr[low] == target or arr[high] == target:
+			return low if arr[low] == target else high
+		elif arr[guess] < target:
+			if arr[high] >= target or (arr[high] < target and arr[high] < arr[guess]):
+				low = guess
+			else:
+				high = guess
+		elif arr[guess] > target:
+			if arr[low] <= target or (arr[low] > target and arr[low] > arr[guess]):
+				high = guess
+			else:
+				low = guess
+	return -1
+
+def rotate(arr, n):
+	n %= len(arr)
+	return arr[n:] + arr[:n]
+
+class Listy:
+	def __init__(self, lst):
+		self._lst = lst
+
+	def element_at(self,i):
+		if i >= 0 and i < len(self._lst):
+			return self._lst[i]
+		else:
+			return -1
+
+def search_listy(listy, target):
+	low = high = 0
+	if listy.element_at(high) == -1:
+		return -1
+	else:
+		high = 1
+		while listy.element_at(high) != -1:
+			high *= 2
+		return binary_listy_search(listy, target, low, high)
+
+def binary_listy_search(listy, target, low, high):
+	while high - low >= 0:
+		guess = (high + low)//2
+		if listy.element_at(guess) == -1:
+			high = guess - 1
+		elif listy.element_at(guess) == target:
+			return guess
+		elif listy.element_at(guess) > target:
+			high = guess - 1
+		else:
+			low = guess + 1
+	return -1
+
+## SORT BIG FILE ##
+
+def sort_big_file(filename):
+	if not filename:
+		return []
+	else:
+		tree = BinarySearchTree()
+		with open(filename) as file:
+			for line in file:
+				tree.insert(line.strip())
+		return tree.sorted_list()
+
+class Node:
+	def __init__(self, value):
+		self.value = value
+		self.parent = self.left = self.right = None
+
+	def __lt__(self, other):
+		return self
+
+class BinarySearchTree:
+	def __init__(self):
+		self._root = None
+
+	def sorted_list(self):
+		return self.__in_order_traversal(self._root)
+
+	def __in_order_traversal(self, node):
+		if node is None:
+			return []
+		else:
+			return self.__in_order_traversal(node.left) + [node.value] + self.__in_order_traversal(node.right)
+
+	def insert(self, value):
+		target = self._root
+		prev = None
+		while target is not None:
+			prev = target
+			if value <= target.value:
+				target = target.left
+			else:
+				target = target.right
+		target = Node(value)
+		if prev is not None:
+			target.parent = prev
+			if target.value <= prev.value:
+				prev.left = target
+			else:
+				prev.right = target
+		else:
+			self._root = target
+
+def generate_word_list(num_words=10000, max_length=20):
+	return '\n'.join([make_word(max_length) for i in range(num_words)])
+
+def make_word_list_file(num_words=10000, max_length=20, filename='test_words.txt'):
+	word_list = generate_word_list()
+	print(word_list)
+	with open(filename, 'w') as file:
+		file.write(word_list)
+		print("SUCCESSFULLY WROTE WORD LIST")
+
+## MISSING INT ##
+def test_xor(limit=10000, tests=10):
+	for __ in range(tests):
+		nums = set()
+		for _ in range(limit):
+			nums.add(random.randint(0,limit*4)) # reduced change of collisions
+		nums = list(nums)
+		# print(nums)
+		result = reduce(lambda x,y: x^y, nums)
+		print(nums)
+		print(result)
+		assert (-1 * (~result) ) not in nums, nums[nums.index((-1 * (~result) ))]
+		# assert result not in nums, nums[nums.index(result)]
+		# print(bin(result))
+		# print(~result)
+		# print(bin(~result))
+
+class BitVector:
+	def __init__(self, length):
+		self._vector = bytearray(length)
+		self.length = length
+
+	def set(self, bit_num):
+		if self.__valid_bit(bit_num):
+			self._vector[bit_num//8] |= (1 << bit_num % 8)
+
+	def get(self, bit_num):
+		if self.__valid_bit(bit_num):
+			return (self._vector[bit_num//8] >> bit_num % 8) & 1
+
+	def clear(self, bit_num):
+		if self.__valid_bit(bit_num):
+			self._vector[bit_num//8] &= ~(1 << bit_num % 8)
+
+	def __valid_bit(self, bit_num):
+		if bit_num < self.length:
+			return True
+		else:
+			raise IndexError
+
+	def __str__(self):
+		return "0b" + ''.join([str(self.get(i)) for i in range(self.length-1,-1,-1)])
+
+	def __repr__(self):
+		return str(self)
+
+import queue
+class HuffmanTree:
+	def __init__(self, training_data):
+		self._training_data = training_data
+		self._encoding_tree = None
+		self._frequencies = None
+		self.__calculate_frequencies()
+		self.__build_encoding_tree()
+
+	def __calculate_frequencies(self):
+		self._frequencies = {}
+		for c in self._training_data:
+			if c in self._frequencies:
+				self._frequencies[c] += 1
+			else:
+				self._frequencies[c] = 1
+		print(self._frequencies)
+
+	def __build_encoding_tree(self):
+		if not self._frequencies:
+			self.__calculate_frequencies()
+		encoding_queue = queue.PriorityQueue()
+		for c in self._frequencies:
+			encoding_queue.put( (self._frequencies[c], Node([c])) )
+		while not encoding_queue.empty():
+			(freq1, node1) = encoding_queue.get()
+			if encoding_queue.empty():
+				self._encoding_tree = node1
+			else:
+				(freq2, node2) = encoding_queue.get()
+				new_node = Node(node1.value + node2.value)
+				new_node.left = node1
+				new_node.right = node2
+				node1.parent = new_node
+				node2.parent = new_node
+				encoding_queue.put((freq1 + freq2, new_node))
+
+	def get_encoding_for_character(self, c):
+		if not self._encoding_tree:
+			self.__build_encoding_tree()
+		node = self._encoding_tree
+		encoding = ""
+		while len(node.value) > 1:
+			print(node.value)
+			if c in node.left.value:
+				encoding += "0"
+				node = node.left
+			else:
+				encoding += "1"
+				node = node.right
+		return encoding

@@ -1,0 +1,10 @@
+from functools import reduce
+def get_array(): return map(int, input().strip().split())
+n,m = get_array()
+a = get_array()
+b = get_array()
+def gcd(a,b): return a if b==0 else gcd(b,a%b)
+def lcm(a,b): return (a*b)//gcd(a,b)
+multiple = reduce(lcm,a)
+divisor = reduce(gcd,b)
+print(len(list(filter(lambda n: divisor % n == 0, range(multiple,divisor+multiple,multiple)))))
