@@ -824,3 +824,434 @@ def test_T9_tree():
 	for code in codes:
 		print("WORD FOR CODE: %d IS: %s" % (code, tree.lookup_word(code)))
 
+
+"""
+
+	SUM SWAP
+	Input: two arrays of integers
+	Goal: find value in each array such that swapping them means sum(a1) == sum(a2)
+
+		SPECIAL CASES:
+			Bad Input: None
+			Sums are the Same: Need to find number contained in both arrays
+			Difference is Odd: Can't Do Operation
+
+		WAYS TO SOLVE:
+			NAIVE: Calculate array sums, go through array 1, for each value look through array 2 for complement
+				O(nm) -- probably best we can do with O(1) space complexity
+			BETTER: Go through array 1 and array 2 to calculate sums, store values in hashmaps at same time
+				THEN: iterate through hashmap of a looking for complementary value in hashmap for b
+				O(n + m) -- iterate through each array once and iterate through hashmaps once
+
+				USE SET instead -- instead of adding to dict as I go, add all to set
+					Time complexities of set are similar as implementations are similar
+					BENEFIT: no duplicates -- less iteration
+					LIST: O(n) to check if element in list -- no good
+
+	COMPLEMENTARY NUMBER:
+		If sum(s1) = a and sum(s2) = b:
+			Need to find numbers c and d s.t. a - c + d = b - d + c
+				ONCE c is chosen from set1, then: 2d = b - a + 2c
+					==> d = (b - a + 2c)/2
+"""
+
+
+def sum_swap(arr1, arr2):
+	result = []
+
+	if not arr1 or not arr2: return result
+	
+	sum1, sum2 = sum(arr1), sum(arr2)
+	if (sum1 - sum2)%2 == 1: return result
+
+	set1, set2 = set(arr1), set(arr2)
+	if sum1 == sum2:
+		values = set1&set2
+		if len(values) > 0:
+			result = list(values)[0]
+			result = [result, result]
+	else:
+		for value in set1:
+			complement = (sum2 - sum1 + (2*value))//2
+			if complement in set2:
+				result = [value, complement]
+				break
+
+	return result
+
+def test_sum_swap():
+	print(sum_swap([4,1,2,1,1,2], [3,6,3,3]))
+
+"""
+
+	Langton's Ant
+
+		GIVEN: k == number of moves,
+		OUTPUT: final grid
+
+		STRATEGY:
+			ASSUME starting on white square
+			create hashmap: store coordinates (x,y):color
+			start at 0,0: color initially white
+			change to black, add to hashmap
+			have formula for non-visited squares
+
+			keep track of min_x, min_y, max_x, max_y, direction (1,2,3,4) == (right, down, left, up)
+
+			render grid at end
+
+			formula for square: (0,0) is white
+			FOR ALL EVEN X VALUES (0,2,4....), EVEN Y == White, ODD Y == Black
+			FOR ALL ODD  X VALUES (-1,1,3...), EVEN Y == Black, ODD Y == White
+
+			Rendering grid, remember rows are y values, columns are x
+
+
+	0
+270	   90
+   180
+
+
+"""
+
+class Direction:
+	def __init__(self):
+		self.direction = 90
+
+	def turn_right(self):
+		self.direction += 90
+		self.direction %= 360
+
+	def turn_left(self):
+		self.direction -= 90
+		self.direction %= 360
+
+	def get_next_square(self, coordinate):
+		mappings = {0: (0,1), 90: (1,0), 180: (0,-1), 270: (-1, 0)}
+		delta_x, delta_y = mappings[self.direction]
+		return (coordinate[0] + delta_x, coordinate[1] + delta_y)
+
+def simulate_moves(k):
+	if k <= 0: return render_grid()
+
+	x_bounds = [0,0]
+	y_bounds = [0,0]
+	position = (0,0)
+	visited = {}
+	direction = Direction()
+	for i in range(k):
+		current_color = visited[position] if position in visited else get_color(position)
+		if current_color == 'W':
+			visited[position] = 'B'
+			direction.turn_right()
+		else:
+			visited[position] = 'W'
+			direction.turn_left()
+		position = direction.get_next_square(position)
+		update_bounds(x_bounds, position[0])
+		update_bounds(y_bounds, position[1])
+	render_grid(visited, x_bounds, y_bounds)
+
+def update_bounds(bounds, coordinate):
+	if coordinate < bounds[0]:
+		bounds[0] = coordinate
+	elif coordinate > bounds[1]:
+		bounds[1] = coordinate
+
+def get_color(position):
+	if position[0] % 2 == 0:
+		return 'W' if position[1] % 2 == 0 else 'B'
+	else:
+		return 'B' if position[1] % 2 == 0 else 'W' 
+
+# if offset for x and y is 5, then grid[0][0] really refers to (-5, -5)
+
+def render_grid(visited = {}, x_bounds = [0,0], y_bounds=[0,0]):
+	x_offset = abs(x_bounds[0])
+	y_offset = abs(y_bounds[0])
+	grid = []
+
+	# render rows top to bottom
+	for y in range(y_bounds[1], y_bounds[0] - 1, -1):
+		row = []
+		for x in range(x_bounds[0], x_bounds[1] + 1):
+			coordinate = (x,y)
+			if coordinate in visited:
+				row.append(visited[coordinate])
+			else:
+				row.append(get_color(coordinate))
+		grid.append(row)
+
+	print("\n".join(list(map(lambda row: "".join(row), grid))))
+
+def test_ant(k=5):
+	simulate_moves(k)
+
+"""
+
+Rand(7) from Rand(5)
+
+5 and 7 are relatively prime (GCD(5,7) == 1)
+BUT -- if I can map some numbers using rand5 to a range where there is ONLY ONE way to make each number
+THEN I can return a value, so long as it is evenly divisible by 7 as well
+
+NOW-- If I do 5*(0-4) + (0-4) I have one way to get each # from 0 to 24
+	Thus, Probability of each is 1/24th
+
+BUT-- If I cut off 22-24, then I have an equal probability of getting a remaining number. 1/21 == (1/7)/3
+If I mod this with 7 I'll get a number 
+
+"""
+
+def rand5():
+	return random.randint(0,4)
+
+def rand7_wrand5():
+	while True:
+		num = 5*rand5() + rand5()
+		if num < 21:
+			return num%7
+
+def test_rand7(iterations=1000):
+	test_rand(iterations, 7, rand7_wrand5)
+
+def rand3():
+	return random.randint(0,2)
+
+def rand5_wrand3():
+	while True:
+		num = 3*rand3() + rand3()
+		if num < 5: return num%5
+
+def rand13_wrand3():
+	def rand9(): return 3*rand3() + rand3()
+	while True:
+		num = 9*rand9() + rand9()
+		if num < 78: return num%13
+
+### DEVELOP RAND_X_W_Y FUNCTION
+
+def rand_x_with_y(base1, base2):
+	if base1 <= 1 or base2 <= 1: return None
+	else:
+		def rand(): return random.randint(0,base1-1)
+		multipliers = [1]
+		while multipliers[-1]*(base1-1) < base2:
+			multipliers.append(multipliers[-1] * base1)
+		target = ((multipliers[-1]*base1)//base2)*base2
+		while True:
+			num = sum([multiplier*rand() for multiplier in multipliers])
+			if num < target:
+				return num % base2
+
+def test_rand_x_with_y(base1, base2, iterations=10000):
+	def test_func(): return rand_x_with_y(base1, base2)
+	test_rand(iterations, base2, test_func)
+
+def test_rand5(iterations=1000):
+	test_rand(iterations, 5, rand5_wrand3)
+
+def test_rand13(iterations=1000):
+	test_rand(iterations, 13, rand13_wrand3)
+
+def test_rand(iterations, limit, func):
+	print("EXPECTED COUNTS: %.2f%%" % (100/limit))
+	counts = {k:0 for k in range(limit)}
+	for i in range(iterations):
+		counts[func()] += 1
+	print({k:v/(iterations/100) for k,v in counts.items()})
+
+
+"""
+
+	PAIRS WITH SUM:
+		INPUT: array with integers, target value
+		OUTPUT: all pairs that sum to the target
+
+	STRATEGIES:
+		1. Naive -- just try all pairs. O(n^2)
+		2. Better -- sort the array O(nlogn), start at beginning and end, move to middle O(n): overall O(nlogn)
+		3. Best -- put all elements into hashmap along with counts, iterate over keys, note number of pairs that sum to target. O(n) + O(number of pairs)
+
+"""
+
+def pairs_with_sum(arr, target):
+	if not arr: return []
+	else:
+		counts = {}
+		for num in arr:
+			if num in counts:
+				counts[num] += 1
+			else:
+				counts[num] = 1
+		pairs = []
+		for num in counts:
+			complement = target - num
+			if complement in counts:
+				if num != complement:
+					for i in range(counts[num]):
+						for j in range(counts[complement]):
+							pairs.append((num, complement))
+				else:
+					for i in range(counts[num]):
+						for j in range(i+1, counts[num]):
+							pairs.append((num, num))
+				counts[num] = 0
+				counts[complement] = 0
+		return pairs
+
+def test_pairs_with_sum(n=1000, p=0.25):
+	arr = [random.randint(-n,n) for i in range(n)]
+	target = random.randint(-n,n)
+	for i in range(1,n):
+		if random.random() < p:
+			arr[random.randint(0,i-1)] = target - arr[i]
+	pairs = pairs_with_sum(arr, target)
+	print(pairs)
+	assert all([pair[0] + pair[1] == target for pair in pairs])
+
+"""
+
+	LRU Cache
+
+	Goal: map from k to value, store max size
+	When we reach max size, evict LRU item
+
+	NAIVE: Add all elements to a dictionary as key: (value, accesstime), increment accesstime upon access
+		When cache is full, scan over all, delete lowest access
+		Problem: eviction takes O(n) time --> slow :(
+
+	BETTER: Store items in dictionary, create an item class that stores access time
+			Store items also in min_queue with first access time. Pop items from min queue
+				If access time in queue == access time on item, then we delete it from the cache, else pop next
+
+			Good: O(log n) time to add to queue. Problem is that repeated accesses all take O(logn) time.
+
+	BEST: store items in dictionary AND in double linked list. When item is accessed, move it to tail.
+		When queue full, delete head.
+
+		O(1) deletions, finds (tail and head), appends
+		Dictionary storage makes access random and O(1) as well
+
+"""
+
+class CacheNode:
+	def __init__(self, key, value):
+		self.key = key
+		self.value = value
+		self.next = None
+		self.prev = None
+
+	def __str__(self):
+		return str(self.value)
+
+	def __repr__(self):
+		return str(self)
+
+class LRUCache:
+	def __init__(self, max_size):
+		if max_size <= 0:
+			raise ValueError("Max Size must be at least 1")
+		self.max_size = max_size
+		self.size = 0
+		self.__head = None
+		self.__tail = None
+		self.__key_map = {}
+
+	def add(self, key, value):
+		node = CacheNode(key, value)
+		self.__key_map[key] = node
+		if self.__head is None:
+			self.__head = node
+			self.__tail = node
+		else:
+			node.next = self.__tail
+			node.next.prev = node
+			self.__tail = node
+		self.size += 1
+		if self.size > self.max_size:
+			self.__evict_oldest()
+
+	def get(self, key):
+		if key not in self.__key_map: raise IndexError()
+		node = self.__key_map[key]
+		if self.__head == node:
+			self.__head = self.__head.prev
+		if node.next is not None:
+			node.next.prev = node.prev
+		if node.prev is not None:
+			node.prev.next = node.next
+		node.next = self.__tail
+		node.prev = None
+		self.__tail = node
+		return node.value
+
+	def __evict_oldest(self):
+		node = self.__head
+		del self.__key_map[node.key]
+		self.__head = self.__head.prev
+		if self.__head is not None:
+			self.__head.next = None
+		else:
+			self.__tail = None
+
+	def __str__(self):
+		return str(self.__key_map)
+
+	def __repr__(self):
+		return str(self)
+
+
+"""
+
+	CALCULATOR:
+		input: arithmetic expression, positive integers without parentheses (+, -, *, /)
+		NAIVE: left to right -- problem: wrong answer
+		BETTER: left to right, first do multiplication and division, then addition and subtraction. Requires two passes
+		BEST: build tree using operation class --> build tree then execute
+
+	In reality, I might use inheritance for this. In this case I'll use one class and if statements
+
+	ACTUALLY: it's not recursive. Just do left to right, mult and div first, add subtract second.
+
+"""
+
+def evaluate_expression(expr):
+	if not expr: return 0
+	else:
+		expr = [int(i) if i not in ['-','+','/','*'] else i for i in expr]
+		expr = evaluate_mult_divide(expr)
+		expr = evaluate_add_subtract(expr)
+		return expr[0]
+
+def evaluate_mult_divide(expr):
+	output = []
+	i = 0
+	while i < len(expr):
+		if expr[i] == '*':
+			output[-1] *= expr[i+1]
+			i += 2
+		elif expr[i] == '/':
+			output[-1] //= expr[i+1]
+			i += 2
+		else:
+			output.append(expr[i])
+			i += 1
+	return output
+
+def evaluate_add_subtract(expr):
+	output = []
+	i = 0
+	while i < len(expr):
+		if expr[i] == '+':
+			output[-1] += expr[i+1]
+			i += 2
+		elif expr[i] == '-':
+			output[-1] -= expr[i-1]
+			i += 2
+		else:
+			output.append(expr[i])
+			i += 1
+	return output
+
+
