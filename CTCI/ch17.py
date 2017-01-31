@@ -988,3 +988,605 @@ def test_shortest_complete_subsequence(n=10000, s=500,n_factor=5, times=10):
 	# Set Based answer out performs optimized list based answer.
 	# When there are FEW collisions (very long sequences needed), set based answer DRAMATICALLY
 	# underperforms, possibly by factor of ~100
+
+
+"""
+
+	Find Missing Numbers:
+		Single Missing: easy. Sum it up. Subtract from expected sum.
+		Double Missing: 
+			sum it up. Find single missing number. Partition around missing//2. Find missing # in smaller half.
+		Double Missing w/out modifying array:
+			sum it. sum squares. Solve quadratic formula.
+
+"""
+import math
+def find_missing_numbers_non_mutating(arr):
+	missing = find_missing_number(arr,num_missing=2)
+	missing_squares = sum(map(lambda x: x**2, range(1,len(arr)+3))) - sum(map(lambda x: x**2, arr))
+	# x + y = missing
+	# x^2 + y^2 = missing_squares
+	"""
+		y = missing - x
+		x^2 + (missing - x)^2 = missing_squares
+		x^2 + missing^2 -2(missing * x) + x^2 = missing_squares
+		2x^2 -2*missing*x + missing^2 - missing_squares = 0
+		x = [-b +/- sqrt(b^2 - 4ac)]/2a
+	"""
+	a = 2
+	b = -2 * missing
+	c = missing**2 - missing_squares
+	first = (-b - math.sqrt(b**2 - 4*a*c))//(2*a)
+	second = missing - first
+	return (int(first), int(second))
+
+
+def find_missing_numbers(arr):
+	total_missing = find_missing_number(arr,2)
+	i = pivot(arr,total_missing//2)
+	if i > len(arr)//2:
+		first = find_missing_number(arr[i:],1,i+2)
+	else:
+		first = find_missing_number(arr[:i],1)
+	second = total_missing - first
+	return (first,second)
+
+def pivot(arr,p):
+	start,end = 0,len(arr) - 1
+	left, right = start, end
+	while right > left:
+		while arr[left] <= p and left < end: left += 1
+		while arr[right] > p and right > left: right -= 1
+		if right > left:
+			swap(arr,left,right)
+			left += 1
+			right -= 1
+	return left
+
+def find_missing_number(arr,num_missing=1,start=1):
+	length = len(arr) + num_missing
+	return expected_sum(length,start) - sum(arr)
+
+def expected_sum(end,start=1): 
+	return (((end)*(end+1))//2) - (((start*(start-1)))//2)
+
+"""
+
+	CONTINUOUS MEDIAN:
+		Given numbers, write function to continuously maintain median value as we add values
+
+	STRATEGY:
+		Encapsulate in class (to maintain state)
+		Use min-heap for numbers larger than median, max-queue for numbers less than or equal to median.
+		When we get a new number:: less than median? add to smaller queue. Greater than median? Add to larger queue.
+		If difference in size is greater than 1: pop element from smaller and add to larger. (Smaller will ALWAYS be at least as large)
+
+"""
+
+import heapq
+class MedianManager:
+	def __init__(self):
+		self.below = []
+		self.above = []
+		self.median = None
+
+	# major kludge: negate values for min heap
+	def add_value(self,value):
+		if self.median is None:
+			self.median = value
+			heapq.heappush(self.below,-value)
+		else:
+			if value <= self.median:
+				heapq.heappush(self.below,-value)
+			else:
+				heapq.heappush(self.above,value)
+			if len(self.below) - len(self.above) > 1:
+				heapq.heappush(self.above,-heapq.heappop(self.below))
+			elif len(self.above) > len(self.below):
+				heapq.heappush(self.below,-heapq.heappop(self.above))
+			self.median = -self.below[0] if len(self.below) > len(self.above) else ((-1*self.below[0]) + self.above[0])/2
+			assert len(self.below) - len(self.above) in [0,1]
+			# print(self.above)
+			# print(self.below)
+
+def test_median_manager(n=50):
+	arr = [random.randint(0,n) for i in range(n)]
+	mm = MedianManager()
+	print(arr)
+	for i in range(n):
+		mm.add_value(arr[i])
+		print("MEDIAN OF: %s IS %.0f" % (str(sorted(arr[:i+1])),mm.median))
+
+"""
+
+	HISTOGRAM VOLUME :: come back to this one :)
+
+"""
+
+"""
+
+	WORD TRANSFORMER:
+		Given two words of equal length in dictionary, transform one into another changing one letter at a time.
+
+	STRATEGY:
+		NAIVE: Look over whole dictionary for words one character away from current. Make list. For each, iterate again.
+				SLOW --> huge growth in time.
+		BETTER:
+			Map wildcard words together. Use BFS from start and end.
+
+"""
+from functools import reduce
+import queue
+
+class WordTransformer:
+	def __init__(self, dictionary):
+		self.dictionary = dictionary
+		self.wildcard_map = self.build_wildcard_map(dictionary)
+		# print(self.wildcard_map)
+
+	def build_wildcard_map(self, dictionary):
+		wildcard_map = {}
+		for i in range(len(dictionary)):
+			word = dictionary[i]
+			# print(word)
+			wildcards = self.make_wildcards(word)
+			for wildcard in wildcards:
+				if wildcard in wildcard_map: wildcard_map[wildcard].append(word)
+				else: wildcard_map[wildcard] = [word]
+		return wildcard_map
+
+	def wildcard_matches(self,word,wildcard):
+		if len(word) != len(wildcard): return False
+		else:
+			for i in range(len(word)):
+				if word[i] != wildcard[i] and wildcard[i] != '?':
+					return False
+			return True
+
+	def make_wildcards(self,word): return [self.make_wildcard(word,j) for j in range(len(word))]
+
+	def make_wildcard(self,word,index): return word[:index] + '?' + word[index+1:]
+
+	# def branch(self, word): return list(set(reduce(lambda l1, l2: l1 + l2, map(lambda wildcard: self.wildcard_map[wildcard], self.make_wildcards(word)))))
+
+	# do BFS from first to second --> make function to convert wildcard map into graph
+	def transform(self,word1,word2):
+		if len(word1) == len(word2):
+			def branch(word): return list(set(filter(lambda w: w != word, reduce(lambda l1, l2: l1 + l2, map(lambda wildcard: self.wildcard_map[wildcard], self.make_wildcards(word))))))
+			bfs_tree = IterativeBFS(word1, word2, branch)
+			result = []
+			while len(result) == 0: result = bfs_tree.iterate()
+			print(result)
+
+class Node:
+	def __init__(self, value, pred=None):
+		self.value = value
+		self.pred = pred
+		self.children = []
+
+	def add_child(self, child):
+		self.children.append(child)
+		child.pred = self
+
+	def __str__(self):
+		return "NODE: %s \tPRED: %s" % (self.value, (self.pred.value if self.pred is not None else "-"))
+
+	def __repr__(self):
+		return str(self)
+
+class IterativeBFS:
+	def __init__(self,start,end,branch_function):
+		self.__start = Node(start)
+		self.__end = Node(end)
+
+		self.__start_queue = queue.Queue()
+		self.__start_queue.put(self.__start)
+
+		self.__end_queue = queue.Queue()
+		self.__end_queue.put(self.__end)
+
+		self.__start_node_table = {start: self.__start}
+		self.__end_node_table = {end: self.__end}
+		self.__branch_function = branch_function
+
+	def iterate(self):
+		new_start_queue = queue.Queue()
+		new_end_queue = queue.Queue()
+		while not self.__start_queue.empty():
+			node = self.__start_queue.get()
+			# print(node)
+			next_nodes = self.__branch_function(node.value)
+			# print("NEXT NODES: %s" % str(next_nodes))
+			for value in next_nodes:
+				if value in self.__end_node_table:
+					return self.__make_path(node,self.__end_node_table[value])
+				else:
+					new_node = Node(value)
+					node.add_child(new_node)
+					new_start_queue.put(new_node)
+					self.__start_node_table[new_node.value] = new_node
+
+		while not self.__end_queue.empty():
+			node = self.__end_queue.get()
+			# print(node)
+			next_nodes = self.__branch_function(node.value)
+			# print("NEXT NODES: %s" % str(next_nodes))
+			for value in next_nodes:
+				if value in self.__start_node_table:
+					return self.__make_path(self.__start_node_table[value], node)
+				else:
+					new_node = Node(value)
+					node.add_child(new_node)
+					new_end_queue.put(new_node)
+					self.__end_node_table[new_node.value] = new_node
+
+		self.__start_queue = new_start_queue
+		self.__end_queue = new_end_queue
+		return []
+
+	def __make_path(self, to_start,to_end):
+		left_part = []
+		right_part = []
+		node = to_start
+		while node:
+			left_part.append(node.value)
+			node = node.pred
+		node = to_end
+		while node:
+			right_part.append(node.value)
+			node = node.pred
+		return left_part[::-1] + right_part
+
+def test_word_transformer():
+	dictionary = ["damp","lamp","limp","lime","like","lick","love","dump","pump"]
+	wt = WordTransformer(dictionary)
+	return wt
+
+"""
+
+	MAX SQUARE MATRIX:
+		Given square matrix (nxn) -- return largest subsquare (mxm) s.t. all blocks in the border are black.
+
+	STRATEGY:
+		Convert matrix so that 0 represents black, 1 represents white 
+		Precalculate number of 1's lying to the right of a current square, not including it
+		Precalculate number of 0's lying below a current square, not including it
+
+		Iterate through squares, look at corners. Pick max_size.
+
+		O(N^3) Complexity -- once we find a square we don't look at any smaller ones.
+"""
+
+def max_square_matrix(matrix):
+	if len(matrix) != len(matrix[0]): return None
+	else:
+		n = len(matrix)
+		zero_counts = precalculate_zeroes(matrix)
+		max_size = 1
+		max_corner = None # upper left corner
+		for row in range(n):
+			if n-row < max_size: break
+			for col in range(n):
+				if n-col < max_size: break
+				max_possible_size = largest_square_at(matrix,row,col,zero_counts, max_size)
+				if max_possible_size > max_size:
+					max_size = max_possible_size
+					max_corner = (row,col)
+		return (max_corner, max_size)
+
+def precalculate_zeroes(matrix):
+	zeroes = [[(0,0) for j in matrix[0]] for i in matrix]
+	for row in range(len(matrix)-1,-1,-1):
+		for col in range(len(matrix[0])-1,-1,-1):
+			if matrix[row][col] == 0:
+				right_zeroes = (zeroes[row][col + 1][1] if col < len(matrix[0]) - 1 else 0) + 1
+				bottom_zeroes = (zeroes[row + 1][col][0] if row < len(matrix) - 1 else 0) + 1
+				zeroes[row][col] = (bottom_zeroes, right_zeroes) # to correspond to rows, columns
+	return zeroes
+
+def largest_square_at(matrix,row,col,zero_counts, max_size):
+	if matrix[row][col] == 0:
+		test_size = min(zero_counts[row][col])
+		while test_size > max_size:
+			test_right_zeroes = zero_counts[row + test_size - 1][col][1]
+			test_bottom_zeroes = zero_counts[row][col + test_size - 1][0]
+			if test_right_zeroes >= test_size and test_bottom_zeroes >= test_size:
+				max_size = test_size
+			test_size -= 1
+	return max_size
+
+def test_max_square_matrix():
+	matrix =   [[1,1,1,0,1],\
+				[0,0,0,0,0],\
+				[1,0,1,1,0],\
+				[0,0,1,0,0],\
+				[1,0,0,0,0]]
+	print(max_square_matrix(matrix))
+
+
+"""
+
+	MAXIMUM SUBMATRIX:
+		Given NxN matrix, return maximum sum that can be obtained from any submatrix
+
+	BRUTE FORCE: O(n^6) ==> try all pairs and calculate sum. N^4 Pairs, N^2 time per calculation.
+	
+	BETTER: precalculate sums for all pairs O(n^4), return max
+
+	BEST: calculate all sums starting from top left: O(n^2)
+			Use sums to calculate sum for any given submatrix: O(1)
+			Calculate best submatrix for every pair of rows r_1 and r_2: O(n^2) * O(n) = O(n^3)
+			To find best sum in O(n) time, store sum at each column, and min sum up to that point.
+			Initialize min sum to zero.
+			Store max of value - min_sum for each pair of rows. Return maximum.
+
+			OVERALL: O(n^3)
+
+"""
+
+def maximum_submatrix(matrix):
+	if len(matrix) != len(matrix[0]): return -1
+	else:
+		n = len(matrix)
+		sums = precalculate_sums(matrix)
+		max_sum = -sys.maxsize
+		max_corners = []
+		for row1 in range(n):
+			for row2 in range(row1,n):
+				current_max,corner1,corner2 = max_sum_for_rows(matrix,row1,row2,sums)
+				if current_max > max_sum:
+					max_sum = current_max
+					max_corners = (corner1,corner2)
+		return (max_sum, max_corners)
+
+def precalculate_sums(matrix):
+	sums = [[matrix[i][j] for j in range(len(matrix[0]))] for i in range(len(matrix))]
+	for row in range(len(matrix)):
+		for col in range(len(matrix[0])):
+			if row - 1 >= 0:
+				sums[row][col] += sums[row - 1][col]
+			if col - 1 >= 0:
+				sums[row][col] += sums[row][col - 1]
+			if row - 1 >= 0 and col - 1 >= 0:
+				sums[row][col] -= sums[row - 1][col - 1] #double counted
+	return sums
+
+def max_sum_for_rows(matrix,row1,row2,sums):
+	cols = len(matrix[0])
+	max_sum = -sys.maxsize
+	max_column = 0
+	min_sum = 0
+	min_column = -1
+	
+	for col in range(0,cols):
+		current_sum = calculate_sum(sums,row1,row2,0,col)
+		if current_sum - min_sum > max_sum:
+			max_sum = current_sum - min_sum
+			max_column = col
+		if current_sum < min_sum:
+			min_sum = current_sum
+			min_column = col
+
+	corner2 = (row2,max_column)
+	corner1 = (row1,min_column+1)
+	return (max_sum,corner1,corner2)
+
+# expect col2 > col1, row2 > row1, could check input, not going to
+def calculate_sum(sums,row1,row2,col1,col2):
+	total = sums[row2][col2]
+	if col1 > 0:
+		total -= sums[row2][col1-1]
+	if row1 > 0:
+		total -= sums[row1-1][col2]
+	if row1 > 0 and col1 > 0:
+		total += sums[row1-1][col1-1]
+	return total
+
+def test_maximum_submatrix():
+	matrix =   [[-1,-1,-1],\
+				[2,2,2],\
+				[3,3,3]]
+	# should be 15
+	print(maximum_submatrix(matrix))
+
+"""
+
+		WORD RECTANGLE:
+			Given a dictionary of valid words,
+			return largest matrix of letters,
+			such that each row (left to right) and each column (top to bottom) is in dictionary.
+
+		Brute Force: try every letter. Let n be longest word. We have 26^(n^n). Very stupid.
+		Less Stupid Brute Force: Try every arrangement of words of every size. O(sum(2^n_i))
+		Optimal: 
+			*Group words by length
+			*Try to create a rectangle of maximum length for each.
+				*Create prefix tries of words for given length (create lazily)
+				*Use prefix tries to short circuit
+				*Use DFS to try to build a rectangle
+			*Return first valid rectangle
+
+"""
+
+class WordTrieNode:
+	def __init__(self, char='', parent=None, complete_word = False):
+		self.char = char
+		self.parent = parent
+		self.prefix = '' if self.parent is None else self.parent.prefix + self.char
+		self.complete_word = complete_word
+		self.children = {}
+
+	def get_child_letters(self):
+		return self.children.keys()
+
+class WordTrie:
+	def __init__(self, words):
+		self.__root = WordTrieNode()
+		self.__words = words # store words in original form as well -> don't have to traverse tree to iterate
+		for word in words:
+			self.add_word(word)
+
+	def add_word(self,word):
+		word = word.lower()
+		node = self.__root
+		for c in word:
+			if c not in node.children:
+				node.children[c] = WordTrieNode(c,node)
+			node = node.children[c]
+		node.complete_word = True
+
+	def get_next_letters(self,prefix):
+		node = self.__root
+		for c in prefix:
+			if c not in node.children: return []
+			else:
+				node = node.children[c]
+		return node.children.keys()
+
+	def get_possible_words(self,possible_letters):
+		possible_prefixes = []
+		for i in range(len(possible_letters)):
+			if len(possible_letters[i]) == 0:
+				return [] # can't make any words if no letters for some position
+			else:
+				possible_prefixes.append([])
+				if i > 0:
+					if len(possible_prefixes[i-1]) == 0:
+						return []
+					else:
+						for prefix in possible_prefixes[i-1]:
+							next_letters = set(self.get_next_letters(prefix)).intersection(possible_letters[i])
+							if len(next_letters) > 0:
+								possible_prefixes[i].extend([prefix + c for c in next_letters])
+				else:
+					possible_prefixes[i].extend([c for c in possible_letters[i] if c in self.__root.children])
+		return possible_prefixes[-1]
+
+	def __iter__(self):
+		return iter(self.__words)
+
+	def __str__(self):
+		return "\n".join(self.__to_array(self.__root))
+
+	def __to_array(self,node):
+		result = []
+		if node.complete_word:
+			result.append(node.char)
+		for c in node.children:
+			for s in self.__to_array(node.children[c]):
+				result.append(node.char + s)
+		return result
+
+
+class WordRectangleBuilder:
+	def __init__(self, dictionary):
+		self.__dictionary = dictionary
+		self.__words_of_length = self.__split_dictionary_by_length(dictionary)
+		self.__max_length = max(self.__words_of_length.keys())
+		self.__tries = {}
+
+	def __split_dictionary_by_length(self, dictionary):
+		words = {}
+		for word in dictionary:
+			length = len(word)
+			if length in words:
+				words[length].add(word)
+			else:
+				words[length] = set([word])
+		return words
+
+	def make_word_rectangle(self, max_height=None,max_width=None):
+		if max_height is None: max_height = self.__max_length
+		if max_width is None: max_width = self.__max_length
+		dimensions = [(width,height) for width in range(1,max_width+1) for height in range(1,max_height+1)]
+		dimensions.sort(reverse=True,key=lambda d: d[0]*d[1])
+		for width,height in dimensions:
+			word_rectangle = self.__build_rectangle(width,height)
+			if word_rectangle: return self.__format_rectangle(word_rectangle)
+		return []
+
+	def __format_rectangle(self, word_rectangle):
+		return "\n".join(["".join(row) for row in word_rectangle])
+
+	def __build_rectangle(self,width,height):
+		vertical_words = self.__tries.get(height,self.__make_trie(height))
+		horizontal_words = self.__tries.get(width, self.__make_trie(width))
+		if not vertical_words or not horizontal_words: return []
+		else:
+			# strategy: add first word horizontally arbitrarily
+			# add additional words using trie: get possible letter for each position in next row
+			# filter through horizontal trie to eliminate bad possibilities
+			for word in horizontal_words:
+				word_rectangle = self.__add_layers([list(word)],horizontal_words,vertical_words,height)
+				if len(word_rectangle) == height: return word_rectangle
+			return []
+	
+	def __add_layers(self,word_rectangle,horizontal_words,vertical_words,height):
+		return self.__add_layer(1,word_rectangle,horizontal_words,vertical_words,height)
+
+	def __add_layer(self,layer,word_rectangle,horizontal_words, vertical_words, height):
+		if layer == height:
+			return word_rectangle
+		else:
+			possible_letters = []
+			for i in range(len(word_rectangle[0])):
+				prefix = [word_rectangle[j][i] for j in range(layer)]
+				possible_letters.append(set(vertical_words.get_next_letters(prefix)))
+			possible_words = horizontal_words.get_possible_words(possible_letters)
+			for word in possible_words:
+				word_rectangle.append(list(word))
+				word_rectangle = self.__add_layer(layer+1,word_rectangle,horizontal_words,vertical_words,height)
+				if len(word_rectangle) == height: break
+				else: word_rectangle.pop()
+			return word_rectangle
+
+	def __make_trie(self, length):
+		if length not in self.__words_of_length: return []
+		else:
+			if length not in self.__tries: self.__tries[length] = WordTrie(self.__words_of_length[length])
+			return self.__tries[length]
+
+
+"""
+GOAL:
+
+slam
+nice
+over
+west
+
+cat
+are
+pea
+
+"""
+
+def test_word_rectangle_builder():
+	dictionary = [
+		'slam',
+		'nice',
+		'over',
+		'west',
+		'snow',
+		'live',
+		'aces',
+		'mert',
+		'cat',
+		'are',
+		'pea',
+		'cap',
+		'are',
+		'tea',
+		'type',
+		'like',
+		'lair',
+		'lion',
+		'tip',
+		'tac',
+		'toe',
+		'art'
+	]
+	wrb = WordRectangleBuilder(dictionary)
+	word_rectangle = wrb.make_word_rectangle()
+	print(word_rectangle)
+	return wrb
