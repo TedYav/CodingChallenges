@@ -1099,9 +1099,91 @@ def test_median_manager(n=50):
 
 """
 
-	HISTOGRAM VOLUME :: come back to this one :)
+	HISTOGRAM VOLUME :: given heights of unit width histograms, calculate how much water they would hold.
 
+	STRATEGY:
+		Set c_max = 0
+		Set c_max_index = -1
+		Set overall_max = 0
+		Set next_max = {}
+		Iterate forward through array.
+			For each non-zero histogram:
+				If greater than current max, update current max, and store current index / height in next_max[previous]
+			Update overall max
+		Iterate backwards.
+			Do same thing, except store previous max in current whenever larger one is encountered.
+			As soon as histogram encountered of height overall_max, break.
+		Iterate forwards:
+			For each histogram, set current_max. Look up next_max. Subtract heights of all histograms in between.
+		Sum volume.
+		Return
+
+	TIME COMPLEXITY: O(n) --> 3 iterations.
 """
+
+def histogram_fill(histograms):
+	maximums = find_maximums(histograms)
+	if len(maximums) <= 1: return 0
+	current_max_index,current_max = maximums[0]
+	next_max_index, next_max = maximums[current_max_index]
+	current_area_to_subtract = 0
+	area = 0
+	for i in range(current_max_index, len(histograms)):
+		if i < next_max_index and i != current_max_index:
+			current_area_to_subtract += histograms[i]
+		elif i == next_max_index:
+			area += calculate_area(current_max,current_max_index,next_max,next_max_index,current_area_to_subtract)
+			current_max_index, current_max = next_max_index, next_max
+			current_area_to_subtract = 0
+			if current_max_index in maximums:
+				next_max_index, next_max = maximums[current_max_index]
+			else:
+				break
+	return area
+
+def calculate_area(height1, index1, height2, index2, area_to_subtract):
+	return (min(height1,height2) * (index2 - index1 - 1) - area_to_subtract)
+
+def find_maximums(histograms):
+	maximums = {}
+
+	current_max = 0
+	current_max_index = -1
+	overall_max = 0
+	# iterate forwards
+	for i in range(len(histograms)):
+		if histograms[i] > 0 and histograms[i] >= current_max:
+			if current_max_index >= 0:
+				maximums[current_max_index] = (i,histograms[i])
+			else:
+				maximums[0] = (i, histograms[i])
+			current_max = histograms[i]
+			current_max_index = i
+			if current_max > overall_max:
+				overall_max = current_max
+	
+	# iterate backwards
+	current_max = 0
+	current_max_index = -1
+	for i in range(len(histograms)-1,-1,-1):
+		if histograms[i] > 0 and histograms[i] >= current_max:
+			if current_max_index >= 0:
+				maximums[i] = (current_max_index,current_max)
+			current_max = histograms[i]
+			current_max_index = i
+			if current_max == overall_max:
+				break
+	return maximums
+
+def test_histogram_fill():
+	histograms = [0,0,4,0,0,6,0,0,3,0,5,0,1,0,0,0]
+	print("TESTING: %s EXPECTED: %d" % (str(histograms),26))
+	print(histogram_fill(histograms))
+	histograms = [0,0,4,0,0,6,0,0,3,0,8,0,2,0,5,2,0,3,0,0]
+	print("TESTING: %s EXPECTED: %d" % (str(histograms),46))
+	print(histogram_fill(histograms))
+
+
 
 """
 
@@ -1590,3 +1672,71 @@ def test_word_rectangle_builder():
 	word_rectangle = wrb.make_word_rectangle()
 	print(word_rectangle)
 	return wrb
+
+"""
+
+	SPARSE SIMILARITY:
+		Given list of documents (ID + array of integers),
+		Return list of pairs of documents along with similarity #: | A intersect B | / | A union B |
+		Only list document pairs where similarity > 0
+
+		It is expected that most documents have similarity = 0
+
+	STRATEGY:
+	Brute Force: Examine all pairs. Takes O((2^n) * m) where n is number of documents. m is length of longest doc.
+	Optimal Strategy: (not very space efficient):
+		* Hash all elements in all documents, listing documents where they occur
+		* Whenever a collision is found, hash all colliding pairs in hash of pairs -> elements in intersection
+		* Iterate through pairs, printing similarity as (size of intersection)/(size of set A + size of set B - size of intersection)
+
+		Time Complexity: O(nm) for initial hashing, O(ps) for pair hashing and output where p is number of pairs, s is elements of largest intersection
+
+		Cannot do better. We have to read all elements (takes O(mn)) and print all pairs (take O(ps))
+
+"""
+
+def sparse_similarity(documents):
+	pairs = find_pairs(documents)
+	output = similarity_header()
+	for doc1,doc2 in pairs:
+		output += render_pair_similarity(doc1,doc2,documents,pairs[(doc1,doc2)])
+	return output
+
+def similarity_header():
+	return "ID1\tID2\tSIMILARITY\n"
+
+def render_pair_similarity(id1,id2,documents,intersection):
+	return "%d\t%d\t%.4f\n" % (id1,id2,similarity(documents[id1],documents[id2],intersection))
+
+def similarity(doc1,doc2,intersection):
+	return len(intersection)/(len(doc1)+len(doc2)-len(intersection))
+
+def find_pairs(documents):
+	element_hash = {}
+	pair_hash = {}
+	for document_id in documents:
+		for element in documents[document_id]:
+			if element in element_hash:
+				update_pair_hash(pair_hash,element,document_id,element_hash[element])
+				element_hash[element].append(document_id)
+			else:
+				element_hash[element] = [document_id]
+	return pair_hash
+
+def update_pair_hash(pair_hash,element,origin_id,doc_ids_to_pair):
+	for complement_id in doc_ids_to_pair:
+		pair = (origin_id,complement_id) if origin_id < complement_id else (complement_id,origin_id)
+		if pair in pair_hash:
+			pair_hash[pair].append(element)
+		else:
+			pair_hash[pair] = [element]
+
+def test_sparse_similarity():
+	documents = {
+		13: [14,15,100,9,3],
+		16:	[32,1,9,3,5],
+		19: [15,29,2,6,8,7],
+		24: [7,10]
+	}
+	result = sparse_similarity(documents)
+	print(result)
